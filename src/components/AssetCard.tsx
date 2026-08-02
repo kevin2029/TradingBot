@@ -26,6 +26,7 @@ export function AssetCard({ assetKey }: { assetKey: AssetKey }) {
         textAlign: 'left',
         cursor: 'pointer',
         background: 'var(--surface)',
+        color: 'var(--text)',
         border: `1px solid ${selected ? 'var(--border2)' : 'var(--border)'}`,
         borderRadius: 14,
         boxShadow: 'var(--shadow)',
