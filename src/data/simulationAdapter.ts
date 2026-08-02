@@ -3,7 +3,8 @@ import type { MarketFeedAdapter } from './adapter'
 import type { AssetKey } from '../types'
 import { randInt, randRange, rnd } from '../utils/format'
 
-const TICK_MS = 1400
+const PRICE_TICK_MS = 30_000
+const ACTIVITY_TICK_MS = 1400
 
 function randomQty(asset: AssetKey): number {
   if (asset === 'XAG') return randInt(50, 150)
@@ -19,15 +20,17 @@ export const simulationAdapter: MarketFeedAdapter = {
     let tick = 0
     let tradeId = 1
 
-    const interval = setInterval(() => {
-      tick += 1
-
+    const priceInterval = setInterval(() => {
       for (const key of ASSET_ORDER) {
         const def = ASSETS[key]
         const next = last[key] + rnd(def.vol * 0.4) + (def.base - last[key]) * 0.008
         last[key] = next
         handlers.onPrice(key, { t: Date.now(), p: next })
       }
+    }, PRICE_TICK_MS)
+
+    const activityInterval = setInterval(() => {
+      tick += 1
 
       handlers.onLatency(randInt(28, 62))
 
@@ -59,8 +62,11 @@ export const simulationAdapter: MarketFeedAdapter = {
         const pick = pool[randInt(0, pool.length - 1)]
         handlers.onAlert({ id: Date.now() + Math.random(), ts: Date.now(), kind: pick.kind, message: pick.message })
       }
-    }, TICK_MS)
+    }, ACTIVITY_TICK_MS)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(priceInterval)
+      clearInterval(activityInterval)
+    }
   },
 }

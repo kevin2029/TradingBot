@@ -27,13 +27,14 @@ export function AssetCard({ assetKey }: { assetKey: AssetKey }) {
         cursor: 'pointer',
         background: 'var(--surface)',
         color: 'var(--text)',
-        border: `1px solid ${selected ? 'var(--border2)' : 'var(--border)'}`,
+        border: `1px solid ${selected ? 'var(--info)' : 'var(--border)'}`,
         borderRadius: 14,
-        boxShadow: 'var(--shadow)',
+        boxShadow: selected ? '0 0 0 3px var(--infosoft), var(--shadow)' : 'var(--shadow)',
         padding: '16px 18px',
         display: 'flex',
         flexDirection: 'column',
         gap: 12,
+        transition: 'border-color .15s, box-shadow .15s',
       }}
     >
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8 }}>
