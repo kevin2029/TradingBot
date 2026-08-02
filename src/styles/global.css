@@ -1,0 +1,112 @@
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'IBM Plex Sans', system-ui, sans-serif;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+}
+
+:root {
+  --bg: #f4f6f8;
+  --surface: #ffffff;
+  --surface2: #eef1f5;
+  --inset: #f8fafb;
+  --text: #0f151c;
+  --muted: #64748b;
+  --faint: #94a3b8;
+  --border: #e2e7ee;
+  --border2: #cfd7e2;
+  --up: #14855a;
+  --upsoft: rgba(20, 133, 90, 0.1);
+  --down: #cf2f3d;
+  --downsoft: rgba(207, 47, 61, 0.1);
+  --info: #2563eb;
+  --infosoft: rgba(37, 99, 235, 0.1);
+  --warn: #b45309;
+  --warnsoft: rgba(180, 83, 9, 0.1);
+  --grid: rgba(15, 23, 42, 0.07);
+  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.05);
+}
+
+html[data-theme='dark'] {
+  --bg: #0b0f14;
+  --surface: #131a22;
+  --surface2: #1a232e;
+  --inset: #0f151c;
+  --text: #e7edf5;
+  --muted: #8fa0b3;
+  --faint: #64748b;
+  --border: #222d3a;
+  --border2: #2e3b4b;
+  --up: #34d399;
+  --upsoft: rgba(52, 211, 153, 0.12);
+  --down: #f87171;
+  --downsoft: rgba(248, 113, 113, 0.12);
+  --info: #60a5fa;
+  --infosoft: rgba(96, 165, 250, 0.12);
+  --warn: #fbbf24;
+  --warnsoft: rgba(251, 191, 36, 0.12);
+  --grid: rgba(231, 237, 245, 0.08);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);
+}
+
+a {
+  color: var(--info);
+  text-decoration: none;
+}
+a:hover {
+  color: var(--text);
+  text-decoration: underline;
+}
+
+button,
+select,
+input {
+  font-family: inherit;
+}
+
+@keyframes bp {
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.35;
+  }
+}
+
+@keyframes slidein {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border2);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: content-box;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
