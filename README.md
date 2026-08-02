@@ -56,6 +56,10 @@ src/
 
 All market data, trades, positions, and alerts are currently **simulated** (a mean-reverting random walk — see `src/data/simulationAdapter.ts`). The simulation runs behind a `MarketFeedAdapter` interface (`src/data/adapter.ts`), so wiring up a real broker later — e.g. [OANDA](https://developer.oanda.com/rest-live-v20/introduction/)'s free practice API, which covers all four instruments (`XAG_USD`, `XAU_USD`, `WTICO_USD`, `SPX500_USD`) — means writing one new adapter that implements the same interface, with no changes needed to components or state.
 
+## Deployment
+
+Pushes to `main` automatically build and deploy to **GitHub Pages** via [`.github/workflows/deploy.yml`](.github/workflows/deploy.yml). One-time setup: in the repo's **Settings → Pages**, set **Source** to "GitHub Actions". After that, the live site is available at `https://kevin2029.github.io/TradingBot/`.
+
 ## Design system
 
 Light and dark themes are driven by CSS custom properties on `<html data-theme>`, defined in `src/styles/global.css`. See the [design handoff README](design_handoff_trading_bot_dashboard/README.md) for the full token reference, typography scale, and interaction spec this implementation follows.
