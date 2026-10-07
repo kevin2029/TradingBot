@@ -1,3 +1,8 @@
+/* Kevision design system: calm and refined.
+   System font with tabular numbers, quiet surfaces, color only where it means
+   something (up, down, rating, action). Tokens keep their old names so every
+   component picks up the new look. Colors stay hex: the chart mixes alpha in JS. */
+
 *,
 *::before,
 *::after {
@@ -10,70 +15,285 @@ body {
   padding: 0;
 }
 
-body {
-  font-family: 'IBM Plex Sans', system-ui, sans-serif;
-  background: var(--bg);
-  color: var(--text);
-  -webkit-font-smoothing: antialiased;
-}
-
 :root {
-  --bg: #f4f6f8;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter, system-ui, sans-serif;
+  --font-display: -apple-system, BlinkMacSystemFont, 'SF Pro Display', 'Segoe UI', Inter, system-ui, sans-serif;
+
+  /* brand: the logo's mint to blue */
+  --brand-1: #2ee6a6;
+  --brand-2: #14b8c4;
+  --brand-3: #2f6bff;
+  --brand-gradient: linear-gradient(135deg, var(--brand-1), var(--brand-2) 55%, var(--brand-3));
+
+  /* light */
+  --bg: #f3f6f8;
   --surface: #ffffff;
-  --surface2: #eef1f5;
-  --inset: #f8fafb;
-  --text: #0f151c;
-  --muted: #64748b;
-  --faint: #94a3b8;
-  --border: #e2e7ee;
-  --border2: #cfd7e2;
-  --up: #14855a;
-  --upsoft: rgba(20, 133, 90, 0.1);
-  --down: #cf2f3d;
-  --downsoft: rgba(207, 47, 61, 0.1);
-  --info: #2563eb;
-  --infosoft: rgba(37, 99, 235, 0.1);
-  --warn: #b45309;
-  --warnsoft: rgba(180, 83, 9, 0.1);
-  --grid: rgba(15, 23, 42, 0.07);
-  --shadow: 0 1px 2px rgba(15, 23, 42, 0.06), 0 4px 16px rgba(15, 23, 42, 0.05);
+  --surface2: #f0f0f3;
+  --inset: #f5f5f7;
+  --text: #1d1d1f;
+  --muted: #6e6e73;
+  --faint: #8e8e93;
+  --border: #e5e5ea;
+  --border2: #d1d1d6;
+  /* up = the logo's mint, deepened until it reads on white (4.9:1) */
+  --up: #08805f;
+  --upsoft: rgba(8, 128, 95, 0.1);
+  --on-up: #ffffff;
+  --down: #d70015;
+  --downsoft: rgba(215, 0, 21, 0.08);
+  --on-down: #ffffff;
+  /* accent = the logo's blue, deepened for text on white (5.3:1) */
+  --info: #1f63e6;
+  --infosoft: rgba(31, 99, 230, 0.1);
+  --warn: #b25000;
+  --warnsoft: rgba(255, 149, 0, 0.12);
+  --grid: rgba(0, 0, 0, 0.06);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 6px 24px rgba(0, 0, 0, 0.05);
+  --material: rgba(243, 246, 248, 0.72);
+  --hairline: rgba(0, 0, 0, 0.08);
+  --seg-track: rgba(118, 118, 128, 0.12);
+  --c1: #1f63e6;
+  --c2: #a347d6;
+  --c3: #e07800;
+  --seg-thumb: #ffffff;
+
+  --radius-card: 20px;
+  --radius-control: 12px;
+
+  /* motion: crisp, short, strong curves */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  --ease-in-out: cubic-bezier(0.77, 0, 0.175, 1);
+  --dur-press: 160ms;
+  --dur-fast: 150ms;
+  --dur-ui: 200ms;
+
+  --tabbar-h: 0px;
+  color-scheme: light;
 }
 
 html[data-theme='dark'] {
-  --bg: #0b0f14;
-  --surface: #131a22;
-  --surface2: #1a232e;
-  --inset: #0f151c;
-  --text: #e7edf5;
-  --muted: #8fa0b3;
-  --faint: #64748b;
-  --border: #222d3a;
-  --border2: #2e3b4b;
-  --up: #34d399;
-  --upsoft: rgba(52, 211, 153, 0.12);
-  --down: #f87171;
-  --downsoft: rgba(248, 113, 113, 0.12);
-  --info: #60a5fa;
-  --infosoft: rgba(96, 165, 250, 0.12);
-  --warn: #fbbf24;
-  --warnsoft: rgba(251, 191, 36, 0.12);
-  --grid: rgba(231, 237, 245, 0.08);
-  --shadow: 0 1px 2px rgba(0, 0, 0, 0.4), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --bg: #000000;
+  --surface: #1c1c1e;
+  --surface2: #2c2c2e;
+  --inset: #232326;
+  --text: #f5f5f7;
+  --muted: #a1a1a6;
+  --faint: #7c7c80;
+  --border: #2c2c2e;
+  --border2: #3a3a3c;
+  /* the logo's mint as is: bright on black, needs dark text on top of it */
+  --up: #2ee6a6;
+  --upsoft: rgba(46, 230, 166, 0.14);
+  --on-up: #00140d;
+  --down: #ff453a;
+  --downsoft: rgba(255, 69, 58, 0.14);
+  --on-down: #ffffff;
+  --info: #3d8bff;
+  --infosoft: rgba(61, 139, 255, 0.16);
+  --warn: #ff9f0a;
+  --warnsoft: rgba(255, 159, 10, 0.14);
+  --grid: rgba(255, 255, 255, 0.07);
+  --shadow: none;
+  --material: rgba(22, 22, 24, 0.72);
+  --hairline: rgba(255, 255, 255, 0.1);
+  --seg-track: rgba(118, 118, 128, 0.24);
+  --c1: #3d8bff;
+  --c2: #bf5af2;
+  --c3: #ff9f0a;
+  --seg-thumb: #636366;
+  color-scheme: dark;
+}
+
+body {
+  font: 15px/1.47 var(--font);
+  letter-spacing: -0.01em;
+  background: var(--bg);
+  color: var(--text);
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 300ms ease;
 }
 
 a {
   color: var(--info);
   text-decoration: none;
 }
-a:hover {
-  color: var(--text);
-  text-decoration: underline;
+@media (hover: hover) and (pointer: fine) {
+  a:hover {
+    text-decoration: underline;
+  }
 }
 
 button,
 select,
 input {
-  font-family: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+}
+
+select {
+  appearance: none;
+  background-image: linear-gradient(45deg, transparent 50%, var(--muted) 50%), linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(100% - 15px) 50%,
+    calc(100% - 10px) 50%;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+  padding-right: 28px !important;
+}
+
+/* ---- type ----------------------------------------------------------------- */
+.t-display {
+  font-family: var(--font-display);
+  font-size: 34px;
+  line-height: 1.12;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+.t-title {
+  font-family: var(--font-display);
+  font-size: 22px;
+  line-height: 1.2;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+.t-headline {
+  font-size: 17px;
+  line-height: 1.3;
+  font-weight: 600;
+  letter-spacing: -0.015em;
+}
+.t-sub {
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--muted);
+  letter-spacing: -0.005em;
+}
+.t-caption {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--faint);
+  letter-spacing: 0;
+}
+@media (max-width: 600px) {
+  .t-display {
+    font-size: 28px;
+  }
+}
+
+/* ---- interaction ------------------------------------------------------------
+   Every pressable thing answers the press. Small buttons scale down a little
+   (.tap adds a hover tint); wide rows (.row) would visibly shrink, so they only
+   get the tint. */
+button {
+  transition:
+    transform var(--dur-press) var(--ease-out),
+    background-color var(--dur-fast) ease,
+    border-color var(--dur-fast) ease,
+    color var(--dur-fast) ease;
+}
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+button.row:not(:disabled):active {
+  transform: none;
+}
+
+.tap {
+  position: relative;
+  isolation: isolate;
+}
+.tap::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: var(--text);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity var(--dur-fast) ease;
+}
+.tap:not(:disabled):active::after {
+  opacity: 0.07;
+  transition-duration: 0ms;
+}
+@media (hover: hover) and (pointer: fine) {
+  .tap:not(:disabled):hover::after {
+    opacity: 0.04;
+  }
+}
+
+/* keyboard focus only */
+:focus-visible {
+  outline: 2px solid var(--info);
+  outline-offset: 2px;
+}
+:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ---- materials -------------------------------------------------------------- */
+.material {
+  background: var(--material);
+  -webkit-backdrop-filter: saturate(180%) blur(20px);
+  backdrop-filter: saturate(180%) blur(20px);
+}
+/* menus float above content: a heavier, more opaque material */
+.material-strong {
+  background: color-mix(in srgb, var(--surface) 96%, transparent);
+  -webkit-backdrop-filter: saturate(180%) blur(30px);
+  backdrop-filter: saturate(180%) blur(30px);
+}
+/* popover grows out of its trigger (top centre), fast in */
+.menu-pop {
+  transform-origin: top center;
+  transition:
+    opacity 150ms var(--ease-out),
+    transform 150ms var(--ease-out);
+}
+@starting-style {
+  .menu-pop {
+    opacity: 0;
+    transform: scale(0.96) translateY(-4px);
+  }
+}
+@media (prefers-reduced-transparency: reduce) {
+  .material-strong {
+    background: var(--surface);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .material {
+    background: var(--bg);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* ---- entering content -------------------------------------------------------- */
+.page {
+  animation: page-in var(--dur-ui) var(--ease-out);
+}
+@keyframes page-in {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+}
+
+.enter {
+  transition:
+    opacity var(--dur-ui) var(--ease-out),
+    transform var(--dur-ui) var(--ease-out);
+}
+@starting-style {
+  .enter {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
 }
 
 @keyframes bp {
@@ -86,14 +306,22 @@ input {
   }
 }
 
-@keyframes slidein {
-  from {
-    opacity: 0;
-    transform: translateY(-6px);
-  }
-  to {
-    opacity: 1;
+@media (prefers-reduced-motion: reduce) {
+  button:not(:disabled):active {
     transform: none;
+  }
+  @keyframes page-in {
+    from {
+      opacity: 0;
+    }
+  }
+  @starting-style {
+    .enter {
+      transform: none;
+    }
+  }
+  .seg-indicator {
+    transition-duration: 0ms !important;
   }
 }
 
@@ -111,33 +339,209 @@ input {
   background: transparent;
 }
 
+/* ---- layout ----------------------------------------------------------------- */
 .page {
-  max-width: 1560px;
+  max-width: 1280px;
   margin: 0 auto;
-  padding: 24px;
+  padding: 28px 28px 48px;
   display: flex;
   flex-direction: column;
-  gap: 20px;
+  gap: 24px;
+}
+
+.page-head {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
 }
 
 .main-grid {
   display: grid;
-  grid-template-columns: minmax(340px, 440px) minmax(0, 1fr);
-  gap: 20px;
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  gap: 24px;
   align-items: start;
+}
+.main-grid > .sticky-col {
+  position: sticky;
+  top: 76px;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(440px, 100%), 1fr));
+  gap: 24px;
+  align-items: start;
+}
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(300px, 100%), 1fr));
+  gap: 24px;
+  align-items: start;
+}
+
+/* desktop: top nav; phone: bottom tab bar */
+.nav-top {
+  display: flex;
+}
+.tabbar {
+  display: none;
 }
 
 @media (max-width: 980px) {
   .main-grid {
     grid-template-columns: minmax(0, 1fr);
   }
+  .main-grid > .sticky-col {
+    position: static;
+  }
+  /* on narrow screens the stock list and the stock detail are separate screens */
+  .main-grid[data-route='detail'] > .list-col {
+    display: none;
+  }
+  .main-grid[data-route='list'] > .detail-col {
+    display: none;
+  }
 }
 
-@media (max-width: 520px) {
+@media (max-width: 760px) {
+  :root {
+    --tabbar-h: calc(58px + env(safe-area-inset-bottom));
+  }
+  .nav-top {
+    display: none;
+  }
+  .tabbar {
+    display: grid;
+  }
   .page {
-    padding: 16px;
+    padding: 20px 16px 32px;
+    gap: 20px;
   }
   .hide-sm {
     display: none;
+  }
+}
+
+@media (min-width: 981px) {
+  .only-narrow {
+    display: none !important;
+  }
+}
+
+@media (max-width: 1100px) {
+  .hide-md {
+    display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  /* the stock detail screen gets the whole page: no page title above it */
+  .hide-narrow-detail {
+    display: none;
+  }
+}
+
+@media (max-width: 980px) {
+  /* one scroll on phones: the list grows with the page instead of scrolling inside a card */
+  .list-scroll {
+    max-height: none !important;
+  }
+}
+
+/* ---- opening animation (Splash.tsx) -----------------------------------------------
+   One-off sequence, so keyframes are fine here. Eye opens 0.15s, line draws 0.5s,
+   dot lands 0.95s with a small overshoot (it "lands"), name at 1.05s, fade out at 1.58s. */
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  background: var(--bg);
+  cursor: pointer;
+  transition: opacity 320ms var(--ease-out);
+}
+.splash-out {
+  opacity: 0;
+  pointer-events: none;
+}
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 24px;
+}
+.splash-icon {
+  width: min(176px, 42vw);
+  height: auto;
+  border-radius: 40px;
+  box-shadow: 0 24px 70px rgba(20, 184, 196, 0.32);
+  animation: splash-icon 420ms var(--ease-out) both;
+}
+.splash-eye {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: splash-eye 380ms var(--ease-out) 150ms both;
+}
+.splash-line {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  animation: splash-line 480ms var(--ease-in-out) 500ms forwards;
+}
+.splash-dot {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: splash-dot 360ms cubic-bezier(0.34, 1.56, 0.64, 1) 950ms both;
+}
+.splash-name {
+  font-family: var(--font-display);
+  font-size: clamp(34px, 9vw, 48px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--text);
+  animation: splash-name 420ms var(--ease-out) 1050ms both;
+}
+@keyframes splash-icon {
+  from {
+    opacity: 0;
+    transform: scale(0.92);
+  }
+}
+@keyframes splash-eye {
+  from {
+    opacity: 0.4;
+    transform: scaleY(0.06);
+  }
+}
+@keyframes splash-line {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes splash-dot {
+  from {
+    opacity: 0;
+    transform: scale(0.3) translate(-1.5px, 1.5px);
+  }
+}
+@keyframes splash-name {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  /* no movement: show the finished logo and fade it out */
+  .splash-icon,
+  .splash-eye,
+  .splash-dot,
+  .splash-name {
+    animation: none;
+  }
+  .splash-line {
+    animation: none;
+    stroke-dashoffset: 0;
   }
 }

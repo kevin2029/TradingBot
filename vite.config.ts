@@ -5,11 +5,11 @@ import react from '@vitejs/plugin-react'
 
 /**
  * `npm run dev` also runs the signals pipeline: once at startup (only when the
- * data is missing or older than 6 hours), then every hour while the server runs
+ * data is missing or older than 6 hours), then every 15 minutes while the server runs
  * (every 5 minutes while no stock could be scored, e.g. when offline).
  * The page polls for the file, so it fills in as soon as the first run finishes.
  */
-const HOUR = 60 * 60 * 1000
+const HOUR = 15 * 60 * 1000 // refresh interval (15 min keeps pre-market / after-hours prices current)
 const RETRY = 5 * 60 * 1000
 
 function hasRecommendations(): boolean {

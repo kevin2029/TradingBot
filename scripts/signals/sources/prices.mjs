@@ -1,4 +1,5 @@
-// Daily price history (1 year) for technical analysis and charts.
+// Daily price history (2 years, OHLCV) for technical analysis, backtests and charts.
+// Bars are [ms, close, volume, high, low].
 // Primary: Yahoo Finance chart endpoint (no key, unofficial). Fallback: Stooq CSV.
 import { getJson, getText, sleep } from '../http.mjs'
 import { cached } from '../cache.mjs'
@@ -6,17 +7,21 @@ import { cached } from '../cache.mjs'
 export const attribution = { label: 'Prices: Yahoo Finance / Stooq', url: 'https://finance.yahoo.com' }
 
 async function fromYahoo(symbol) {
-  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=1y&interval=1d&includePrePost=false`
+  const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=2y&interval=1d&includePrePost=false`
   const json = await getJson(url, { headers: { 'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)' } })
   const result = json?.chart?.result?.[0]
   if (!result) throw new Error(json?.chart?.error?.description || 'empty chart')
   const ts = result.timestamp || []
   const closes = result.indicators?.quote?.[0]?.close || []
-  const volumes = result.indicators?.quote?.[0]?.volume || []
+  const q = result.indicators?.quote?.[0] || {}
+  const volumes = q.volume || []
+  const highs = q.high || []
+  const lows = q.low || []
   const bars = []
   for (let i = 0; i < ts.length; i++) {
     if (closes[i] == null) continue
-    bars.push([ts[i] * 1000, round(closes[i]), volumes[i] || 0])
+    const c = round(closes[i])
+    bars.push([ts[i] * 1000, c, volumes[i] || 0, round(highs[i] ?? c), round(lows[i] ?? c)])
   }
   return { bars, name: result.meta?.longName || result.meta?.shortName || null }
 }
@@ -28,8 +33,8 @@ async function fromStooq(symbol) {
   const bars = lines
     .map((l) => l.split(','))
     .filter((c) => c.length >= 5 && c[4] !== 'N/D')
-    .map((c) => [new Date(`${c[0]}T21:00:00Z`).getTime(), round(Number(c[4])), Number(c[5]) || 0])
-    .slice(-260)
+    .map((c) => [new Date(`${c[0]}T21:00:00Z`).getTime(), round(Number(c[4])), Number(c[5]) || 0, round(Number(c[2])), round(Number(c[3]))])
+    .slice(-520)
   if (bars.length < 2) throw new Error('no stooq data')
   return { bars, name: null }
 }
@@ -41,9 +46,11 @@ export async function loadPrices(symbols) {
   let errors = 0
   let streak = 0
   let lastError
+  let done = 0
   for (const symbol of symbols) {
+    if (++done % 10 === 0) console.log(`[signals] prices: ${done} of ${symbols.length}`)
     try {
-      const res = await cached(`price-${symbol}`, 30 * 60 * 1000, async () => {
+      const res = await cached(`price2-${symbol}`, 30 * 60 * 1000, async () => {
         try {
           return await fromYahoo(symbol)
         } catch (err) {

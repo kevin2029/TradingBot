@@ -1,22 +1,26 @@
 import type { CSSProperties, ReactNode } from 'react'
 
-export const mono: CSSProperties = { fontFamily: "'IBM Plex Mono', monospace" }
+/** Numbers line up (tabular figures) in the system font. Name kept from the old mono font. */
+export const mono: CSSProperties = { fontVariantNumeric: 'tabular-nums' }
 
 export function Card({
   children,
   padding = 20,
   style,
+  className,
 }: {
   children: ReactNode
   padding?: number
   style?: CSSProperties
+  className?: string
 }) {
   return (
     <div
+      className={className}
       style={{
         background: 'var(--surface)',
-        border: '1px solid var(--border)',
-        borderRadius: 14,
+        border: '1px solid transparent',
+        borderRadius: 'var(--radius-card)',
         boxShadow: 'var(--shadow)',
         padding,
         ...style,
@@ -31,12 +35,11 @@ export function Eyebrow({ children }: { children: ReactNode }) {
   return (
     <span
       style={{
-        fontSize: 11,
-        fontWeight: 700,
-        letterSpacing: '.1em',
+        fontSize: 12,
+        fontWeight: 600,
+        letterSpacing: '.03em',
         color: 'var(--faint)',
         textTransform: 'uppercase',
-        ...mono,
       }}
     >
       {children}
@@ -79,11 +82,10 @@ export function StatusPill({
         padding: '5px 12px 5px 10px',
         borderRadius: 999,
         background,
-        border: background === 'transparent' ? 'none' : '1px solid var(--border)',
       }}
     >
       <StatusDot color={color} pulse={pulse} />
-      <span style={{ fontSize: 12, fontWeight: 600, letterSpacing: '.04em', color, ...mono }}>{label}</span>
+      <span style={{ fontSize: 12.5, fontWeight: 600, color }}>{label}</span>
     </div>
   )
 }
@@ -107,35 +109,59 @@ export function SegmentedControl<T extends string>({
   height?: number
   fontSize?: number
 }) {
+  const n = options.length
+  const index = Math.max(0, options.findIndex((o) => o.value === value))
+  const active = options[index]
   return (
     <div
+      role="tablist"
       style={{
+        position: 'relative',
         display: 'grid',
-        gridTemplateColumns: `repeat(${options.length}, 1fr)`,
-        gap: 4,
-        padding: 4,
-        background: 'var(--inset)',
-        border: '1px solid var(--border)',
+        gridTemplateColumns: `repeat(${n}, 1fr)`,
+        gap: 2,
+        padding: 2,
+        background: 'var(--seg-track)',
         borderRadius: 10,
       }}
     >
+      {/* one pill that slides to the active option instead of each button swapping its background */}
+      <div
+        aria-hidden
+        className="seg-indicator"
+        style={{
+          position: 'absolute',
+          top: 2,
+          left: 2,
+          height,
+          width: `calc((100% - 4px - ${(n - 1) * 2}px) / ${n})`,
+          transform: `translateX(calc(${index} * (100% + 2px)))`,
+          borderRadius: 8,
+          background: 'var(--seg-thumb)',
+          boxShadow: '0 3px 8px rgba(0,0,0,.12), 0 3px 1px rgba(0,0,0,.04)',
+          transition: 'transform var(--dur-ui) var(--ease-in-out)',
+        }}
+      />
       {options.map((opt) => {
-        const active = opt.value === value
+        const on = opt.value === value
         return (
           <button
             key={opt.value}
+            role="tab"
+            aria-selected={on}
             onClick={() => onChange(opt.value)}
             style={{
+              position: 'relative',
               height,
-              borderRadius: 7,
+              borderRadius: 8,
               border: 'none',
               cursor: 'pointer',
               fontSize,
-              fontWeight: 600,
-              background: active ? 'var(--surface)' : 'transparent',
-              color: active ? opt.activeColor ?? 'var(--text)' : 'var(--muted)',
-              boxShadow: active ? '0 1px 3px rgba(0,0,0,.18)' : 'none',
-              transition: 'all .15s',
+              fontWeight: on ? 600 : 500,
+              background: 'transparent',
+              color: on ? active.activeColor ?? 'var(--text)' : 'var(--text)',
+              padding: '0 8px',
+              whiteSpace: 'nowrap',
             }}
           >
             {opt.label}
@@ -214,7 +240,7 @@ export function Switch({
         border: `1px solid ${checked ? 'transparent' : 'var(--border2)'}`,
         background: checked ? onColor : 'var(--surface2)',
         cursor: 'pointer',
-        transition: 'all .2s',
+        transition: 'background-color var(--dur-ui) ease, border-color var(--dur-ui) ease, transform var(--dur-press) var(--ease-out)',
         flexShrink: 0,
       }}
     >
@@ -224,7 +250,7 @@ export function Switch({
           height: 19,
           borderRadius: '50%',
           background: '#fff',
-          transition: 'transform .2s',
+          transition: 'transform var(--dur-ui) var(--ease-in-out)',
           transform: checked ? 'translateX(19px)' : 'translateX(0)',
         }}
       />
@@ -255,7 +281,7 @@ export function MasterToggle({
         background: trackColor,
         padding: 3,
         cursor: 'pointer',
-        transition: 'background .22s ease, border-color .22s ease',
+        transition: 'background-color var(--dur-ui) ease, border-color var(--dur-ui) ease, transform var(--dur-press) var(--ease-out)',
         display: 'block',
       }}
     >
@@ -266,7 +292,7 @@ export function MasterToggle({
           borderRadius: '50%',
           background: '#fff',
           boxShadow: '0 2px 6px rgba(0,0,0,.28)',
-          transition: 'transform .22s cubic-bezier(.4,0,.2,1)',
+          transition: 'transform var(--dur-ui) var(--ease-in-out)',
           transform: checked ? 'translateX(36px)' : 'translateX(0)',
         }}
       />
@@ -278,13 +304,14 @@ export function Chip({ children, style }: { children: ReactNode; style?: CSSProp
   return (
     <span
       style={{
-        fontSize: 10,
-        fontWeight: 700,
-        color: 'var(--faint)',
-        border: '1px solid var(--border)',
-        borderRadius: 4,
-        padding: '1px 5px',
-        ...mono,
+        fontSize: 11,
+        fontWeight: 600,
+        color: 'var(--muted)',
+        background: 'var(--surface2)',
+        border: '1px solid transparent',
+        borderRadius: 6,
+        padding: '2px 7px',
+        letterSpacing: '.01em',
         ...style,
       }}
     >
@@ -294,17 +321,28 @@ export function Chip({ children, style }: { children: ReactNode; style?: CSSProp
 }
 
 export function FieldLabel({ children }: { children: ReactNode }) {
-  return <label style={{ fontSize: 12.5, fontWeight: 600, display: 'block', marginBottom: 6 }}>{children}</label>
+  return <label style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)', display: 'block', marginBottom: 6 }}>{children}</label>
 }
 
 export const inputStyle: CSSProperties = {
-  height: 38,
-  borderRadius: 8,
+  height: 40,
+  borderRadius: 10,
   border: '1px solid var(--border)',
   background: 'var(--inset)',
   color: 'var(--text)',
-  fontSize: 13,
+  fontSize: 14,
   margin: 0,
   width: '100%',
   padding: '0 12px',
+}
+
+/** Small label above a value: sentence case, quiet. */
+export const LABEL: CSSProperties = { fontSize: 12, fontWeight: 500, color: 'var(--muted)', letterSpacing: 0 }
+
+/** "VS S&P (3M)" -> "vs S&P (3M)", "STOP LOSS" -> "Stop loss": old uppercase labels read calmer in sentence case. */
+export function prettyLabel(label: string) {
+  const lower = label.toLowerCase()
+  let s = lower.charAt(0).toUpperCase() + lower.slice(1)
+  s = s.replace(/\b(atr|rsi|s&p|wsb|ipo|sma|r)\b/gi, (m) => m.toUpperCase()).replace(/\b(\d+)m\b/g, '$1M').replace(/^Vs\b/, 'vs')
+  return s
 }

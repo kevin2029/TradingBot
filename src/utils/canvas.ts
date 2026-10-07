@@ -1,3 +1,6 @@
+/** Same system font as the page (canvas can't read CSS variables in ctx.font). */
+export const CHART_FONT = "-apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Segoe UI', Inter, system-ui, sans-serif"
+
 export function cssVar(name: string): string {
   return getComputedStyle(document.documentElement).getPropertyValue(name).trim()
 }

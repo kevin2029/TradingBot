@@ -3,6 +3,7 @@
 // raw records must not be redistributed, so only per-ticker aggregates are kept.
 import { getJson, isoDate, daysAgo, sleep } from '../http.mjs'
 import { cached, HOUR } from '../cache.mjs'
+import { isLeader } from '../universe.mjs'
 
 const BASE = 'https://www.bargo.ai/free-apis/congress/v1'
 
@@ -47,7 +48,10 @@ async function fetchTrades() {
         ticker,
         side: s,
         member: r.member_slug || r.member || 'unknown',
+        name: r.member || r.member_slug || 'unknown',
+        leader: isLeader(`${r.member || ''} ${r.member_slug || ''}`),
         date: r.transaction_date || r.disclosure_date,
+        disclosed: r.disclosure_date || r.transaction_date,
         weight: amountWeight(r.amount_range),
       })
     }
@@ -59,28 +63,37 @@ async function fetchTrades() {
 
 /** @returns {Promise<{ok:boolean,error?:string,byTicker:Map<string,object>,fetchedAt:number}>} */
 export async function loadCongress() {
-  const res = await cached('congress', 24 * HOUR, fetchTrades)
+  const res = await cached('congress3', 24 * HOUR, fetchTrades)
   const now = Date.now()
   const byTicker = new Map()
   for (const t of res.data) {
-    const ageDays = Math.max(0, (now - new Date(t.date).getTime()) / 86400000) || 45
-    const decay = Math.pow(0.5, ageDays / 30) // 30-day half-life
-    const agg = byTicker.get(t.ticker) || { buys: 0, sells: 0, buyers: new Set(), sellers: new Set(), net: 0, latest: null }
+    // Trades are reported up to 45 days late, so freshness is measured from the
+    // disclosure date: a trade made public yesterday is news, one from 6 weeks ago is not.
+    const ageDays = Math.max(0, (now - new Date(t.disclosed ?? t.date).getTime()) / 86400000) || 45
+    const decay = Math.pow(0.5, ageDays / 21) // 21-day half-life from disclosure
+    const agg = byTicker.get(t.ticker) || { buys: 0, sells: 0, buyers: new Set(), sellers: new Set(), net: 0, latest: null, leaderBuys: 0, leaderSells: 0, leaders: new Set() }
+    // Party leaders' trades carry information, rank-and-file members' mostly do not.
+    const leader = t.leader ?? false
+    const w = t.weight * decay * (leader ? 3 : 0.3)
     if (t.side === 'buy') {
       agg.buys++
       agg.buyers.add(t.member)
-      agg.net += t.weight * decay
+      agg.net += w
+      if (leader) agg.leaderBuys++
     } else {
       agg.sells++
       agg.sellers.add(t.member)
-      agg.net -= t.weight * decay
+      agg.net -= w
+      if (leader) agg.leaderSells++
     }
+    if (leader) agg.leaders.add(t.name)
     if (!agg.latest || t.date > agg.latest) agg.latest = t.date
     byTicker.set(t.ticker, agg)
   }
   for (const agg of byTicker.values()) {
     agg.buyers = agg.buyers.size
     agg.sellers = agg.sellers.size
+    agg.leaders = [...agg.leaders]
   }
   return {
     ok: !res.stale,

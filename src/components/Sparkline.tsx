@@ -8,7 +8,7 @@ export function Sparkline({
   values: number[]
   color: string
   softColor: string
-  width?: number
+  width?: number | string
   height?: number
 }) {
   if (values.length < 2) return <svg width={width} height={height} viewBox="0 0 100 40" />

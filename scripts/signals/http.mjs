@@ -1,7 +1,8 @@
 // Small fetch helpers shared by every data source. Node 20+ (global fetch).
 
-export const USER_AGENT =
-  process.env.SEC_USER_AGENT || 'MeridianSignals/1.0 (personal research; github.com/kevin2029/TradingBot)'
+// Read lazily: build-signals loads .env.local after this module is imported.
+// The SEC requires "Name email" here (fair-access rule), otherwise it answers 403.
+export const userAgent = () => process.env.SEC_USER_AGENT || 'KevisionSignals test@test.com'
 
 export const sleep = (ms) => new Promise((r) => setTimeout(r, ms))
 
@@ -24,7 +25,7 @@ export async function request(url, { method = 'GET', headers = {}, body, timeout
     try {
       const res = await fetch(url, {
         method,
-        headers: { 'User-Agent': USER_AGENT, Accept: 'application/json, text/plain, */*', ...headers },
+        headers: { 'User-Agent': userAgent(), Accept: 'application/json, text/plain, */*', ...headers },
         body,
         signal: ctrl.signal,
       })

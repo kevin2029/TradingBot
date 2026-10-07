@@ -45,7 +45,7 @@ jobs:
           FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
           BARGO_API_KEY: ${{ secrets.BARGO_API_KEY }}
           LDA_API_KEY: ${{ secrets.LDA_API_KEY }}
-          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT || 'MeridianSignals/1.0 (github.com/kevin2029/TradingBot)' }}
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT || 'KevisionSignals test@test.com' }}
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

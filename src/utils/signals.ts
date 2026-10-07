@@ -9,24 +9,24 @@ export const RATING_META: Record<Rating, { label: string; color: string; soft: s
 }
 
 export const REGIME_META: Record<Regime, { label: string; color: string; soft: string }> = {
-  'risk-on': { label: 'RISK ON', color: 'var(--up)', soft: 'var(--upsoft)' },
-  neutral: { label: 'NEUTRAL', color: 'var(--warn)', soft: 'var(--warnsoft)' },
-  'risk-off': { label: 'RISK OFF', color: 'var(--down)', soft: 'var(--downsoft)' },
+  'risk-on': { label: 'Risk on', color: 'var(--up)', soft: 'var(--upsoft)' },
+  neutral: { label: 'Neutral', color: 'var(--warn)', soft: 'var(--warnsoft)' },
+  'risk-off': { label: 'Risk off', color: 'var(--down)', soft: 'var(--downsoft)' },
 }
 
 export const COMPONENT_META: Record<ComponentKey, { label: string; short: string; hint: string }> = {
-  technical: { label: 'Chart', short: 'CHT', hint: 'Trend vs 50/200 day averages, 20 day momentum, RSI' },
-  congress: { label: 'Congress', short: 'CON', hint: 'Disclosed purchases minus sales by members of Congress, last 90 days' },
-  insider: { label: 'Insiders', short: 'INS', hint: 'Open-market Form 4 buys and sells by company insiders, last 90 days' },
-  social: { label: 'WSB buzz', short: 'WSB', hint: 'Rank and 24h mention change on r/wallstreetbets' },
-  contracts: { label: 'Gov contracts', short: 'GOV', hint: 'Federal contract awards in the last 30 days' },
-  lobbying: { label: 'Lobbying', short: 'LOB', hint: 'Lobbying spend disclosed in the last 90 days' },
+  technical: { label: 'Chart', short: 'CHT', hint: '12 month momentum (skipping the last month) and closeness to the 52 week high, both ranked against all stocks, plus the 200 day trend' },
+  congress: { label: 'Congress', short: 'CON', hint: 'Disclosed trades by members of Congress. Party leaders count fully, other members only a little: studies find only leaders beat the market' },
+  insider: { label: 'Insiders', short: 'INS', hint: 'Open-market Form 4 trades. Unusual (opportunistic) buys count most, routine yearly trades are ignored, several buyers at once add a bonus' },
+  social: { label: 'WSB buzz', short: 'WSB', hint: 'Only a risk: heavy hype on r/wallstreetbets tends to come before weaker returns, so it can lower a score but never raise it' },
+  contracts: { label: 'Gov contracts', short: 'GOV', hint: 'Federal contract awards in the last 30 days, relative to the size of the company' },
+  lobbying: { label: 'Lobbying', short: 'LOB', hint: 'Change in lobbying spend vs the same period last year: a rising budget says more than a big one' },
 }
 
 export const COMPONENT_ORDER: ComponentKey[] = ['technical', 'congress', 'insider', 'contracts', 'lobbying', 'social']
 
 /** Live price if streaming, otherwise the last close from the snapshot. */
-export function useLive(symbol: string, price: Technicals | null | undefined) {
+export function useLive(symbol: string, price: Pick<Technicals, 'last' | 'history'> | null | undefined) {
   const { quotes } = useAppState()
   const q = quotes[symbol]
   const history = price?.history ?? []
