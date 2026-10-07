@@ -33,6 +33,7 @@ export async function loadInsider(symbols) {
   if (!key) return { ok: false, error: 'FINNHUB_API_KEY not set', count: 0, fetchedAt: Date.now(), byTicker }
 
   let errors = 0
+  let streak = 0
   let lastError
   let oldest = Date.now()
   for (const symbol of symbols) {
@@ -45,9 +46,16 @@ export async function loadInsider(symbols) {
       })
       oldest = Math.min(oldest, res.savedAt)
       byTicker.set(symbol, res.data)
+      streak = 0
     } catch (err) {
       errors++
       lastError = err
+      // Source is down (or the network is): stop instead of failing 50 more times.
+      if (++streak >= 4) {
+        lastError = new Error(`stopped after ${streak} failures in a row: ${err.message}`)
+        errors = symbols.length
+        break
+      }
     }
   }
   return {

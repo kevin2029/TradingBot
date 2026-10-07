@@ -90,6 +90,7 @@ let out
 for (let i = 0; i < 200 && !out; i++) {
   await new Promise((r) => realSetTimeout(r, 25))
   out = await readFile(process.env.SIGNALS_OUT, 'utf8').then(JSON.parse).catch(() => null)
+  if (out && new Date(out.generatedAt).getTime() < now) out = null // an older file from a previous run
 }
 assert.ok(out, 'output written')
 assert.equal(out.version, 1)
@@ -110,4 +111,12 @@ assert.ok(pltr.components.lobbying.score > 0, 'pltr lobbying')
 assert.ok(out.recommendations[0].score >= out.recommendations.at(-1).score, 'sorted')
 assert.ok(nvda.price.history.length === 260 && nvda.price.sma200 > 0, 'history')
 assert.ok(!JSON.stringify(out).includes('token=test'), 'no keys leaked')
+for (const r of out.recommendations) {
+  const pl = r.plan
+  assert.ok(pl, `plan for ${r.symbol}`)
+  assert.ok(['buy-now', 'pullback', 'wait', 'avoid'].includes(pl.action), `action ${pl.action}`)
+  assert.ok(pl.stop < pl.entryLow && pl.entryLow <= pl.entryHigh && pl.entryHigh < pl.target1 && pl.target1 < pl.target2, `levels ordered for ${r.symbol}: ${JSON.stringify(pl)}`)
+  assert.ok(pl.positionPct > 0 && pl.positionPct <= 0.2, 'position size capped')
+  assert.ok(pl.exitRules.length >= 5, 'exit rules')
+}
 console.log(`OK: ${out.recommendations.length} recs, top ${out.recommendations.slice(0, 3).map((r) => `${r.symbol}:${r.score}`).join(' ')}, ${calls.length} stubbed calls`)

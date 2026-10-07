@@ -8,27 +8,65 @@ import { cssVar, hexToRgba } from '../utils/canvas'
 const RANGES: ChartRange[] = ['1D', '1M', '3M', '6M', '1Y']
 const BARS: Record<Exclude<ChartRange, '1D'>, number> = { '1M': 21, '3M': 63, '6M': 126, '1Y': 260 }
 
+type MaKey = 'sma20' | 'sma50' | 'sma200'
+
 interface Pt {
   t: number
   p: number
-  ma?: number | null
+  sma20?: number | null
+  sma50?: number | null
+  sma200?: number | null
 }
 
-function withSma(points: Pt[], n: number): Pt[] {
+function rollingMean(values: number[], n: number): (number | null)[] {
   let sum = 0
-  return points.map((pt, i) => {
-    sum += pt.p
-    if (i >= n) sum -= points[i - n].p
-    return { ...pt, ma: i >= n - 1 ? sum / n : null }
+  return values.map((v, i) => {
+    sum += v
+    if (i >= n) sum -= values[i - n]
+    return i >= n - 1 ? sum / n : null
   })
+}
+
+function withAverages(points: Pt[]): Pt[] {
+  const vals = points.map((p) => p.p)
+  const a20 = rollingMean(vals, 20)
+  const a50 = rollingMean(vals, 50)
+  const a200 = rollingMean(vals, 200)
+  return points.map((pt, i) => ({ ...pt, sma20: a20[i], sma50: a50[i], sma200: a200[i] }))
+}
+
+/** Moving-average overlays: CSS token, dash pattern, legend label. */
+const MA_STYLE: Record<MaKey, { color: string; dash: number[]; label: string }> = {
+  sma20: { color: '--info', dash: [2, 3], label: '20D' },
+  sma50: { color: '--muted', dash: [5, 4], label: '50D' },
+  sma200: { color: '--warn', dash: [9, 4], label: '200D' },
 }
 
 function sameDay(a: number, b: number) {
   return new Date(a).toDateString() === new Date(b).toDateString()
 }
 
-export function PriceChart({ symbol, history, livePrice, liveTs }: { symbol: string; history: Bar[]; livePrice?: number; liveTs?: number }) {
-  const { range, theme, ticks } = useAppState()
+export interface ChartLevel {
+  price: number
+  label: string
+  /** CSS custom property name, e.g. '--up' */
+  color: string
+}
+
+export function PriceChart({
+  symbol,
+  history,
+  livePrice,
+  liveTs,
+  levels = [],
+}: {
+  symbol: string
+  history: Bar[]
+  livePrice?: number
+  liveTs?: number
+  levels?: ChartLevel[]
+}) {
+  const { range, theme, ticks, overlays } = useAppState()
   const dispatch = useAppDispatch()
   const wrapperRef = useRef<HTMLDivElement>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -43,7 +81,7 @@ export function PriceChart({ symbol, history, livePrice, liveTs }: { symbol: str
       if (sameDay(last.t, liveTs)) daily = [...daily.slice(0, -1), { t: liveTs, p: livePrice }]
       else if (liveTs > last.t) daily = [...daily, { t: liveTs, p: livePrice }]
     }
-    return withSma(daily, 50).slice(-BARS[range])
+    return withAverages(daily).slice(-BARS[range])
   }, [range, history, livePrice, liveTs, symbolTicks])
 
   const loaded = points.length >= 2
@@ -75,7 +113,13 @@ export function PriceChart({ symbol, history, livePrice, liveTs }: { symbol: str
       const plotW = right - left
       const plotH = bottom - top
 
-      const values = points.flatMap((p) => (p.ma ? [p.p, p.ma] : [p.p]))
+      const daily = range !== '1D'
+      const shownLevels = daily && overlays.levels ? levels : []
+      const shownMas = daily ? (Object.keys(MA_STYLE) as MaKey[]).filter((k) => overlays[k]) : []
+      const values = [
+        ...points.flatMap((p) => [p.p, ...shownMas.map((k) => p[k]).filter((v): v is number => v != null)]),
+        ...shownLevels.map((l) => l.price),
+      ]
       const min = Math.min(...values)
       const max = Math.max(...values)
       const span = max - min || max * 0.01 || 1
@@ -89,7 +133,6 @@ export function PriceChart({ symbol, history, livePrice, liveTs }: { symbol: str
       const grid = cssVar('--grid')
       const surface = cssVar('--surface')
       const text = cssVar('--text')
-      const muted = cssVar('--muted')
       const lineColor = gain ? cssVar('--up') : cssVar('--down')
       const timeLabel = range === '1D' ? formatHM : formatDate
 
@@ -135,24 +178,53 @@ export function PriceChart({ symbol, history, livePrice, liveTs }: { symbol: str
       ctx.lineJoin = 'round'
       ctx.stroke()
 
-      // 50 day moving average
-      if (range !== '1D') {
+      // moving averages
+      for (const k of shownMas) {
+        const st = MA_STYLE[k]
         ctx.save()
-        ctx.setLineDash([4, 4])
-        ctx.strokeStyle = muted
-        ctx.lineWidth = 1.2
+        ctx.setLineDash(st.dash)
+        ctx.strokeStyle = cssVar(st.color)
+        ctx.lineWidth = 1.3
         ctx.beginPath()
         let started = false
         points.forEach((p, i) => {
-          if (p.ma == null) return
+          const v = p[k]
+          if (v == null) return
           if (!started) {
-            ctx.moveTo(xAt(i), yAt(p.ma))
+            ctx.moveTo(xAt(i), yAt(v))
             started = true
-          } else ctx.lineTo(xAt(i), yAt(p.ma))
+          } else ctx.lineTo(xAt(i), yAt(v))
         })
         ctx.stroke()
         ctx.restore()
       }
+
+      // plan levels (entry, stop, targets)
+      for (const lv of shownLevels) {
+        const ly = yAt(lv.price)
+        const c = cssVar(lv.color)
+        ctx.save()
+        ctx.setLineDash([6, 4])
+        ctx.strokeStyle = hexToRgba(c, 0.85)
+        ctx.lineWidth = 1.2
+        ctx.beginPath()
+        ctx.moveTo(left, ly)
+        ctx.lineTo(right, ly)
+        ctx.stroke()
+        ctx.restore()
+        ctx.font = "600 10.5px 'IBM Plex Mono', monospace"
+        const txt = `${lv.label} ${lv.price.toFixed(2)}`
+        const w = ctx.measureText(txt).width + 10
+        ctx.fillStyle = hexToRgba(c, 0.16)
+        ctx.beginPath()
+        ctx.roundRect(left + 4, ly - 9, w, 18, 4)
+        ctx.fill()
+        ctx.fillStyle = c
+        ctx.textAlign = 'left'
+        ctx.textBaseline = 'middle'
+        ctx.fillText(txt, left + 9, ly + 0.5)
+      }
+      ctx.font = "11px 'IBM Plex Mono', monospace"
 
       // last price rule + dot
       const lastY = yAt(last)
@@ -194,7 +266,8 @@ export function PriceChart({ symbol, history, livePrice, liveTs }: { symbol: str
           range === '1D'
             ? new Date(pt.t).toLocaleTimeString('en-GB', { hour12: false })
             : new Date(pt.t).toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' })
-        const label = `${formatPrice(pt.p)}   ${when}${pt.ma ? `   50d ${pt.ma.toFixed(2)}` : ''}`
+        const mas = shownMas.map((k) => (pt[k] != null ? `   ${MA_STYLE[k].label} ${pt[k]!.toFixed(2)}` : '')).join('')
+        const label = `${formatPrice(pt.p)}   ${when}${mas}`
         const pillW = ctx.measureText(label).width + 20
         const pillH = 22
         const pillX = Math.min(Math.max(x - pillW / 2, left), right - pillW)
@@ -215,14 +288,23 @@ export function PriceChart({ symbol, history, livePrice, liveTs }: { symbol: str
     draw()
     window.addEventListener('resize', draw)
     return () => window.removeEventListener('resize', draw)
-  }, [points, hoverX, theme, gain, last, range])
+  }, [points, hoverX, theme, gain, last, range, levels, overlays])
 
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap', marginBottom: 12 }}>
-        <div style={{ display: 'flex', gap: 14, fontSize: 11.5, color: 'var(--muted)' }}>
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
           <Legend color={gain ? 'var(--up)' : 'var(--down)'} label="Price" />
-          {range !== '1D' && <Legend color="var(--muted)" label="50 day average" dashed />}
+          {range !== '1D' && (
+            <>
+              {(Object.keys(MA_STYLE) as MaKey[]).map((k) => (
+                <Toggle key={k} on={overlays[k]} onClick={() => dispatch({ type: 'TOGGLE_OVERLAY', overlay: k })} color={`var(${MA_STYLE[k].color})`} dashed label={`${MA_STYLE[k].label} avg`} />
+              ))}
+              {levels.length > 0 && (
+                <Toggle on={overlays.levels} onClick={() => dispatch({ type: 'TOGGLE_OVERLAY', overlay: 'levels' })} color="var(--info)" dashed label="Plan levels" />
+              )}
+            </>
+          )}
         </div>
         <div style={{ width: 260 }}>
           <SegmentedControl
@@ -256,11 +338,39 @@ export function PriceChart({ symbol, history, livePrice, liveTs }: { symbol: str
   )
 }
 
-function Legend({ color, label, dashed }: { color: string; label: string; dashed?: boolean }) {
+function Legend({ color, label }: { color: string; label: string }) {
   return (
-    <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-      <span style={{ width: 16, borderTop: `2px ${dashed ? 'dashed' : 'solid'} ${color}` }} />
+    <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11.5, color: 'var(--muted)', marginRight: 6 }}>
+      <span style={{ width: 16, borderTop: `2px solid ${color}` }} />
       {label}
     </span>
+  )
+}
+
+/** Chart overlay filter chip. */
+function Toggle({ on, onClick, color, label, dashed }: { on: boolean; onClick: () => void; color: string; label: string; dashed?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={on}
+      title={on ? `Hide ${label}` : `Show ${label}`}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        height: 26,
+        padding: '0 10px',
+        borderRadius: 999,
+        border: `1px solid ${on ? 'var(--border2)' : 'var(--border)'}`,
+        background: on ? 'var(--surface2)' : 'transparent',
+        color: on ? 'var(--text)' : 'var(--faint)',
+        fontSize: 11.5,
+        fontWeight: 600,
+        cursor: 'pointer',
+      }}
+    >
+      <span style={{ width: 14, borderTop: `2px ${dashed ? 'dashed' : 'solid'} ${on ? color : 'var(--border2)'}` }} />
+      {label}
+    </button>
   )
 }

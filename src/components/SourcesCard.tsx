@@ -35,7 +35,7 @@ export function SourcesCard() {
               <a href={s.attribution.url} target="_blank" rel="noreferrer" style={{ fontSize: 12 }}>
                 {s.attribution.label}
               </a>
-              {s.error && <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>{s.error}</span>}
+              {s.error && <span style={{ fontSize: 11.5, color: 'var(--muted)', overflowWrap: 'anywhere' }}>{s.error}</span>}
             </div>
           )
         })}

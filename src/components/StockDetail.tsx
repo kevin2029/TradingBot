@@ -2,7 +2,8 @@ import { Card, Chip, Eyebrow, mono } from '../ui/Primitives'
 import { useAppState } from '../state/store'
 import { COMPONENT_META, COMPONENT_ORDER, RATING_META, useLive } from '../utils/signals'
 import { formatPct, formatPrice } from '../utils/format'
-import { PriceChart } from './PriceChart'
+import { PriceChart, type ChartLevel } from './PriceChart'
+import { TradePlanCard } from './TradePlanCard'
 import { ScoreBadge } from './RecommendationList'
 
 export function StockDetail() {
@@ -14,6 +15,15 @@ export function StockDetail() {
   const meta = RATING_META[rec.rating]
   const up = live.change >= 0
   const p = rec.price
+  const plan = rec.plan
+  const levels: ChartLevel[] = plan
+    ? [
+        { price: plan.target2, label: 'T2', color: '--up' },
+        { price: plan.target1, label: 'T1', color: '--up' },
+        { price: plan.action === 'wait' ? plan.entryLow : (plan.entryLow + plan.entryHigh) / 2, label: plan.action === 'wait' ? 'BUY ABOVE' : 'ENTRY', color: '--info' },
+        { price: plan.stop, label: 'STOP', color: '--down' },
+      ]
+    : []
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 20, minWidth: 0 }}>
@@ -40,7 +50,7 @@ export function StockDetail() {
             <ScoreBadge score={rec.score} color={meta.color} size={56} />
           </div>
         </div>
-        <PriceChart symbol={rec.symbol} history={p.history} livePrice={live.live ? live.last : undefined} liveTs={live.ts} />
+        <PriceChart symbol={rec.symbol} history={p.history} livePrice={live.live ? live.last : undefined} liveTs={live.ts} levels={levels} />
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(110px, 1fr))', gap: 10, marginTop: 16 }}>
           <Stat label="50D AVG" value={p.sma50 ? formatPrice(p.sma50) : '—'} />
           <Stat label="200D AVG" value={p.sma200 ? formatPrice(p.sma200) : '—'} />
@@ -49,6 +59,8 @@ export function StockDetail() {
           <Stat label="DAILY VOL" value={`${(p.vol20 * 100).toFixed(1)}%`} />
         </div>
       </Card>
+
+      {plan && <TradePlanCard plan={plan} price={live.last} />}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(320px, 100%), 1fr))', gap: 20, alignItems: 'start' }}>
         <Card padding={20} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>

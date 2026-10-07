@@ -1,4 +1,6 @@
-import { NavSegmented, StatusPill, mono } from '../ui/Primitives'
+import type { ReactNode } from 'react'
+import { StatusPill, mono } from '../ui/Primitives'
+import { GearIcon, LogoMark, MoonIcon, SunIcon } from '../ui/Logo'
 import { useAppDispatch, useAppState } from '../state/store'
 import type { LiveStatus } from '../types'
 
@@ -31,47 +33,59 @@ export function Header() {
         padding: '12px 24px',
       }}
     >
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto' }}>
-        <div style={{ width: 30, height: 30, borderRadius: 8, background: 'var(--text)', display: 'grid', placeItems: 'center' }}>
-          <div style={{ width: 12, height: 12, borderRadius: 3, background: 'var(--surface)' }} />
-        </div>
+      <button
+        onClick={() => dispatch({ type: 'SET_VIEW', view: 'dashboard' })}
+        title="Back to signals"
+        style={{ display: 'flex', alignItems: 'center', gap: 10, marginRight: 'auto', background: 'none', border: 'none', padding: 0, cursor: 'pointer', color: 'var(--text)', textAlign: 'left' }}
+      >
+        <LogoMark />
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, letterSpacing: '-.01em', lineHeight: 1.1 }}>Meridian</div>
           <div style={{ fontSize: 11, color: 'var(--faint)', letterSpacing: '.04em', ...mono }}>SIGNAL DESK</div>
         </div>
-      </div>
+      </button>
 
       <div title={state.live.message ?? (state.live.status === 'no-key' ? 'Add a free Finnhub key in Settings for live prices' : undefined)}>
         <StatusPill color={status.color} background="var(--inset)" label={status.label} pulse={status.pulse} />
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-        <NavSegmented
-          value={state.view}
-          onChange={(view) => dispatch({ type: 'SET_VIEW', view })}
-          options={[
-            { value: 'dashboard', label: 'Signals' },
-            { value: 'settings', label: 'Settings' },
-          ]}
-        />
-        <button
-          onClick={() => dispatch({ type: 'TOGGLE_THEME' })}
-          title="Toggle theme"
-          style={{
-            height: 34,
-            padding: '0 12px',
-            borderRadius: 8,
-            border: '1px solid var(--border)',
-            background: 'var(--surface)',
-            color: 'var(--muted)',
-            fontSize: 12,
-            fontWeight: 600,
-            cursor: 'pointer',
-          }}
+        <IconButton
+          title={state.view === 'settings' ? 'Back to signals' : 'Settings'}
+          active={state.view === 'settings'}
+          onClick={() => dispatch({ type: 'SET_VIEW', view: state.view === 'settings' ? 'dashboard' : 'settings' })}
         >
-          <span style={mono}>{state.theme.toUpperCase()}</span>
-        </button>
+          <GearIcon />
+        </IconButton>
+        <IconButton title={state.theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'} onClick={() => dispatch({ type: 'TOGGLE_THEME' })}>
+          {state.theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+        </IconButton>
       </div>
     </header>
+  )
+}
+
+function IconButton({ children, title, onClick, active }: { children: ReactNode; title: string; onClick: () => void; active?: boolean }) {
+  return (
+    <button
+      onClick={onClick}
+      title={title}
+      aria-label={title}
+      aria-pressed={active}
+      style={{
+        width: 34,
+        height: 34,
+        display: 'grid',
+        placeItems: 'center',
+        borderRadius: 8,
+        border: `1px solid ${active ? 'var(--info)' : 'var(--border)'}`,
+        background: active ? 'var(--infosoft)' : 'var(--surface)',
+        color: active ? 'var(--info)' : 'var(--muted)',
+        cursor: 'pointer',
+        padding: 0,
+      }}
+    >
+      {children}
+    </button>
   )
 }

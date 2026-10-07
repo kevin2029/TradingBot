@@ -41,15 +41,34 @@ Ratings: **68+ Strong buy**, **58+ Buy**, **45+ Watch**, below that **Avoid**. W
 
 Tuning lives in `scripts/signals/score.mjs`.
 
+## Position plan (when to buy, when to sell)
+
+Every stock gets a mechanical swing-trade plan (`scripts/signals/plan.mjs`), shown as a card and as lines on the chart:
+
+| Action | When |
+|---|---|
+| **Buy now** | Above the 50 day average, not overbought, rating Buy or better. Entry zone just around the current price |
+| **Buy on a dip** | Stretched (RSI above 70 or far above the 20 day average) or only rated Watch. Entry zone near the 20 day average |
+| **Wait for breakout** | Below the 50 day average. Buy only after a daily close above it |
+| **Don't buy** | Rated Avoid |
+
+- **Stop loss** just under the 20 day swing low, between 1.5 and 3 average daily moves below entry
+- **Target 1** at 2x the risk: sell half and move the stop to break-even
+- **Target 2** at 3.5x the risk, or the 52 week high if that comes first: sell the rest
+- **Other exits:** after target 1, a close below the 20 day average; the score falling under 45; or 30 trading days without reaching target 1
+- **Position size** so that hitting the stop costs about 1% of the account, capped at 20% of the portfolio
+- With live prices on, the card tells you where the price is now (in the entry zone, above it, target reached, stop hit)
+
 ## Setup
 
 Requires Node.js 20+.
 
 ```bash
 npm install
-npm run signals     # fetch data and write public/data/signals.json
-npm run dev         # http://localhost:5173/TradingBot/
+npm run dev
 ```
+
+That one command starts everything: it opens the app, fetches the public data and scores the stocks in the background (about a minute the first time, the page fills in by itself), and refreshes the data every hour while it runs. For live prices and insider trades, copy `.env.example` to `.env.local` and put your free Finnhub key in `VITE_FINNHUB_KEY`.
 
 All keys are free and optional, but more keys mean more signals:
 
@@ -67,6 +86,7 @@ Other scripts:
 
 | Command | Description |
 |---|---|
+| `npm run signals` | Rebuild the data now, without the dev server |
 | `npm run test:signals` | Offline test of the pipeline with stubbed APIs (also runs in CI) |
 | `npm run build` | Type-check and build into `dist/` |
 | `npm run lint` | Type-check only |

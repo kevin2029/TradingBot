@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useReducer, type Dispatch, type ReactNode } from 'react'
-import type { ChartRange, LiveQuote, LiveStatus, RatingFilter, SignalsFile, Theme, View } from '../types'
+import type { ActionFilter, ChartRange, LiveQuote, LiveStatus, Overlay, SignalsFile, SortKey, Theme, View } from '../types'
 
 export interface Tick {
   t: number
@@ -10,7 +10,9 @@ export interface AppState {
   theme: Theme
   view: View
   selected: string | null
-  filter: RatingFilter
+  filter: ActionFilter
+  sort: SortKey
+  overlays: Record<Overlay, boolean>
   range: ChartRange
   finnhubKey: string
   signals: SignalsFile | null
@@ -25,7 +27,9 @@ export type Action =
   | { type: 'TOGGLE_THEME' }
   | { type: 'SET_VIEW'; view: View }
   | { type: 'SELECT'; symbol: string }
-  | { type: 'SET_FILTER'; filter: RatingFilter }
+  | { type: 'SET_FILTER'; filter: ActionFilter }
+  | { type: 'SET_SORT'; sort: SortKey }
+  | { type: 'TOGGLE_OVERLAY'; overlay: Overlay }
   | { type: 'SET_RANGE'; range: ChartRange }
   | { type: 'SET_KEY'; key: string }
   | { type: 'SIGNALS_LOADING' }
@@ -37,7 +41,17 @@ export type Action =
 
 const KEY_STORAGE = 'meridian:finnhubKey'
 const THEME_STORAGE = 'meridian:theme'
+const OVERLAY_STORAGE = 'meridian:overlays'
 const MAX_TICKS = 3000
+const DEFAULT_OVERLAYS: Record<Overlay, boolean> = { sma20: false, sma50: true, sma200: false, levels: true }
+
+function loadOverlays(): Record<Overlay, boolean> {
+  try {
+    return { ...DEFAULT_OVERLAYS, ...JSON.parse(load(OVERLAY_STORAGE) ?? '{}') }
+  } catch {
+    return DEFAULT_OVERLAYS
+  }
+}
 
 function load(key: string): string | null {
   try {
@@ -62,6 +76,8 @@ function initialState(): AppState {
     view: 'dashboard',
     selected: null,
     filter: 'all',
+    sort: 'score',
+    overlays: loadOverlays(),
     range: '6M',
     finnhubKey: (load(KEY_STORAGE) ?? import.meta.env.VITE_FINNHUB_KEY ?? '').trim(),
     signals: null,
@@ -83,6 +99,10 @@ function reducer(state: AppState, action: Action): AppState {
       return { ...state, selected: action.symbol }
     case 'SET_FILTER':
       return { ...state, filter: action.filter }
+    case 'SET_SORT':
+      return { ...state, sort: action.sort }
+    case 'TOGGLE_OVERLAY':
+      return { ...state, overlays: { ...state.overlays, [action.overlay]: !state.overlays[action.overlay] } }
     case 'SET_RANGE':
       return { ...state, range: action.range }
     case 'SET_KEY':
@@ -131,6 +151,7 @@ export function AppStateProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => save(THEME_STORAGE, state.theme), [state.theme])
   useEffect(() => save(KEY_STORAGE, state.finnhubKey), [state.finnhubKey])
+  useEffect(() => save(OVERLAY_STORAGE, JSON.stringify(state.overlays)), [state.overlays])
 
   return (
     <StateCtx.Provider value={state}>

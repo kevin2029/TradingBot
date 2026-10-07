@@ -8,7 +8,7 @@
 //   BARGO_API_KEY     raises the Congress trades quota (free key at bargo.ai)
 //   LDA_API_KEY       raises the lobbying API quota (free key at lda.gov/api/register)
 //   SEC_USER_AGENT    contact string for SEC requests, e.g. "Name email@example.com"
-import { mkdir, writeFile } from 'node:fs/promises'
+import { mkdir, readFile, stat, writeFile } from 'node:fs/promises'
 import { dirname } from 'node:path'
 import { loadTickers } from './signals/sources/tickers.mjs'
 import * as congressSrc from './signals/sources/congress.mjs'
@@ -18,6 +18,7 @@ import * as lobbyingSrc from './signals/sources/lobbying.mjs'
 import * as insiderSrc from './signals/sources/insider.mjs'
 import * as pricesSrc from './signals/sources/prices.mjs'
 import { marketRegime, scoreStock, technicals, WEIGHTS } from './signals/score.mjs'
+import { tradePlan } from './signals/plan.mjs'
 import { readCache, writeCache } from './signals/cache.mjs'
 
 const OUT = process.env.SIGNALS_OUT || 'public/data/signals.json'
@@ -58,8 +59,34 @@ function packHistory(bars) {
   return bars.slice(-HISTORY_BARS).map((b) => [Math.round(b[0] / 1000), b[1]])
 }
 
+/** Load KEY=VALUE pairs from .env.local / .env without overriding real env vars. */
+async function loadEnvFiles() {
+  for (const file of ['.env.local', '.env']) {
+    const text = await readFile(file, 'utf8').catch(() => '')
+    for (const line of text.split('\n')) {
+      const m = line.match(/^\s*([A-Z0-9_]+)\s*=\s*(.*?)\s*$/)
+      if (m && m[2] && !process.env[m[1]]) process.env[m[1]] = m[2].replace(/^["']|["']$/g, '')
+    }
+  }
+}
+
 async function main() {
   const started = Date.now()
+  await loadEnvFiles()
+  // one Finnhub key in .env.local serves both the browser and the pipeline
+  if (!process.env.FINNHUB_API_KEY && process.env.VITE_FINNHUB_KEY) process.env.FINNHUB_API_KEY = process.env.VITE_FINNHUB_KEY
+
+  if (process.argv.includes('--if-missing')) {
+    const info = await stat(OUT).catch(() => null)
+    const existing = info && (await readFile(OUT, 'utf8').then(JSON.parse).catch(() => null))
+    // rebuild when the file predates the trade-plan fields
+    const current = existing?.recommendations?.[0]?.plan !== undefined
+    if (info && current && existing.recommendations.length > 0 && Date.now() - info.mtimeMs < 6 * 3600000) {
+      log(`${OUT} is recent, skipping (run "npm run signals" to refresh)`)
+      return
+    }
+    log('no recent signals.json, building it now (about a minute)...')
+  }
 
   let tickers
   try {
@@ -135,6 +162,7 @@ async function main() {
       return {
         ...rec,
         price: tech ? { ...tech, history: packHistory(p.bars) } : null,
+        plan: tech ? tradePlan(p.bars.map((b) => b[1]), tech, rec.rating) : null,
       }
     })
     .filter((r) => r.price) // can't recommend what we can't chart

@@ -39,6 +39,7 @@ const round = (n) => Math.round(n * 100) / 100
 export async function loadPrices(symbols) {
   const out = new Map()
   let errors = 0
+  let streak = 0
   let lastError
   for (const symbol of symbols) {
     try {
@@ -54,9 +55,16 @@ export async function loadPrices(symbols) {
         }
       })
       if (res.data.bars.length >= 2) out.set(symbol, res.data)
+      streak = 0
     } catch (err) {
       errors++
       lastError = err
+      // Source is down (or the network is): stop instead of failing 50 more times.
+      if (++streak >= 4) {
+        lastError = new Error(`stopped after ${streak} failures in a row: ${err.message}`)
+        errors = symbols.length
+        break
+      }
     }
   }
   return {

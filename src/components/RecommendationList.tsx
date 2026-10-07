@@ -1,42 +1,129 @@
-import { Card, SegmentedControl, mono } from '../ui/Primitives'
+import { Card, mono } from '../ui/Primitives'
 import { useAppDispatch, useAppState } from '../state/store'
-import type { Recommendation, RatingFilter } from '../types'
+import type { ActionFilter, PlanAction, Recommendation, SortKey } from '../types'
 import { COMPONENT_META, COMPONENT_ORDER, RATING_META, useLive } from '../utils/signals'
 import { formatPct, formatPrice } from '../utils/format'
 import { Sparkline } from './Sparkline'
+import { ACTION_META } from './TradePlanCard'
 
-const FILTERS: { value: RatingFilter; label: string }[] = [
-  { value: 'all', label: 'All' },
-  { value: 'buys', label: 'Buys' },
-  { value: 'watch', label: 'Watch' },
-  { value: 'avoid', label: 'Avoid' },
+const ACTIONS: PlanAction[] = ['buy-now', 'pullback', 'wait', 'avoid']
+const ACTION_SHORT: Record<PlanAction, string> = { 'buy-now': 'Buy now', pullback: 'Buy dip', wait: 'Breakout', avoid: "Don't buy" }
+
+const SORTS: { value: SortKey; label: string }[] = [
+  { value: 'score', label: 'Score' },
+  { value: 'upside', label: 'Upside to target 1' },
+  { value: 'change', label: "Today's move" },
+  { value: 'risk', label: 'Lowest risk (stop distance)' },
 ]
 
+function upside(r: Recommendation, price: number) {
+  return r.plan ? r.plan.target1 / price - 1 : -Infinity
+}
+
 export function RecommendationList() {
-  const { signals, filter, selected } = useAppState()
+  const { signals, filter, sort, selected, quotes } = useAppState()
   const dispatch = useAppDispatch()
   if (!signals) return null
 
-  const rows = signals.recommendations.filter((r) =>
-    filter === 'all' ? true : filter === 'buys' ? r.rating === 'buy' || r.rating === 'strong-buy' : r.rating === filter,
-  )
+  const all = signals.recommendations
+  const counts = Object.fromEntries(ACTIONS.map((a) => [a, all.filter((r) => r.plan?.action === a).length])) as Record<PlanAction, number>
+  const livePrice = (r: Recommendation) => quotes[r.symbol]?.price ?? r.price.last
+  const dayMove = (r: Recommendation) => {
+    const q = quotes[r.symbol]
+    if (q?.prevClose) return q.price / q.prevClose - 1
+    return r.price.change1d
+  }
+
+  const rows = all
+    .filter((r) => filter === 'all' || r.plan?.action === filter)
+    .slice()
+    .sort((a, b) => {
+      if (sort === 'upside') return upside(b, livePrice(b)) - upside(a, livePrice(a))
+      if (sort === 'change') return dayMove(b) - dayMove(a)
+      if (sort === 'risk') return (a.plan?.riskPct ?? 1) - (b.plan?.riskPct ?? 1)
+      return b.score - a.score
+    })
 
   return (
     <Card padding={0} style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
       <div style={{ padding: '18px 20px 14px', display: 'flex', flexDirection: 'column', gap: 12, borderBottom: '1px solid var(--border)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
           <span style={{ fontSize: 15, fontWeight: 700 }}>Recommendations</span>
-          <span style={{ fontSize: 11, color: 'var(--faint)', ...mono }}>{signals.recommendations.length} SCANNED</span>
+          <span style={{ fontSize: 11, color: 'var(--faint)', ...mono }}>
+            {rows.length} OF {all.length}
+          </span>
         </div>
-        <SegmentedControl options={FILTERS} value={filter} onChange={(f) => dispatch({ type: 'SET_FILTER', filter: f })} height={28} fontSize={12.5} />
+        <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }} role="group" aria-label="Filter by buy type">
+          <FilterChip active={filter === 'all'} onClick={() => dispatch({ type: 'SET_FILTER', filter: 'all' })} label="All" count={all.length} />
+          {ACTIONS.map((a) => (
+            <FilterChip
+              key={a}
+              active={filter === a}
+              onClick={() => {
+                const next = (filter === a ? 'all' : a) as ActionFilter
+                dispatch({ type: 'SET_FILTER', filter: next })
+                // keep the detail panel in sync with what the list shows
+                const first = all.find((r) => next === 'all' || r.plan?.action === next)
+                if (first && next !== 'all' && all.find((r) => r.symbol === selected)?.plan?.action !== next)
+                  dispatch({ type: 'SELECT', symbol: first.symbol })
+              }}
+              label={ACTION_SHORT[a]}
+              count={counts[a]}
+              color={ACTION_META[a].color}
+            />
+          ))}
+        </div>
+        <label style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--muted)' }}>
+          Sort by
+          <select
+            value={sort}
+            onChange={(e) => dispatch({ type: 'SET_SORT', sort: e.target.value as SortKey })}
+            style={{ flex: 1, height: 30, borderRadius: 7, border: '1px solid var(--border)', background: 'var(--inset)', color: 'var(--text)', fontSize: 12.5, padding: '0 8px' }}
+          >
+            {SORTS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       <div style={{ overflowY: 'auto', maxHeight: 760 }}>
-        {rows.length === 0 && <div style={{ padding: 24, fontSize: 13, color: 'var(--muted)' }}>No stocks in this group right now.</div>}
+        {rows.length === 0 && <div style={{ padding: 24, fontSize: 13, color: 'var(--muted)' }}>No stocks with this buy type right now.</div>}
         {rows.map((r, i) => (
           <Row key={r.symbol} r={r} rank={i + 1} active={r.symbol === selected} onClick={() => dispatch({ type: 'SELECT', symbol: r.symbol })} />
         ))}
       </div>
     </Card>
+  )
+}
+
+function FilterChip({ active, onClick, label, count, color }: { active: boolean; onClick: () => void; label: string; count: number; color?: string }) {
+  return (
+    <button
+      onClick={onClick}
+      aria-pressed={active}
+      disabled={count === 0 && !active}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 6,
+        height: 28,
+        padding: '0 10px',
+        borderRadius: 999,
+        border: `1px solid ${active ? color ?? 'var(--text)' : 'var(--border)'}`,
+        background: active ? 'var(--surface2)' : 'transparent',
+        color: active ? 'var(--text)' : count === 0 ? 'var(--faint)' : 'var(--muted)',
+        fontSize: 12,
+        fontWeight: 600,
+        cursor: count === 0 && !active ? 'default' : 'pointer',
+        opacity: count === 0 && !active ? 0.55 : 1,
+      }}
+    >
+      {color && <span style={{ width: 7, height: 7, borderRadius: '50%', background: color }} />}
+      {label}
+      <span style={{ fontSize: 11, color: 'var(--faint)', ...mono }}>{count}</span>
+    </button>
   )
 }
 
@@ -70,6 +157,11 @@ function Row({ r, rank, active, onClick }: { r: Recommendation; rank: number; ac
           <span style={{ fontSize: 10.5, fontWeight: 700, color: meta.color, background: meta.soft, borderRadius: 4, padding: '1px 6px', whiteSpace: 'nowrap', ...mono }}>
             {meta.label.toUpperCase()}
           </span>
+          {r.plan && (
+            <span title={r.plan.summary} style={{ fontSize: 10, fontWeight: 600, color: ACTION_META[r.plan.action].color, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', ...mono }}>
+              {ACTION_META[r.plan.action].label}
+            </span>
+          )}
         </div>
         <span style={{ fontSize: 12, color: 'var(--muted)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{r.name}</span>
         <SignalDots r={r} />

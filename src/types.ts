@@ -37,6 +37,26 @@ export interface Component {
   detail: string
 }
 
+export type PlanAction = 'buy-now' | 'pullback' | 'wait' | 'avoid'
+
+export interface TradePlan {
+  action: PlanAction
+  summary: string
+  entryLow: number
+  entryHigh: number
+  stop: number
+  target1: number
+  target2: number
+  /** fraction of entry price at risk between entry and stop */
+  riskPct: number
+  rewardRisk: number
+  /** suggested fraction of the portfolio when risking 1% of the account */
+  positionPct: number
+  avgMove: number
+  holding: string
+  exitRules: string[]
+}
+
 export interface Recommendation {
   symbol: string
   name: string
@@ -47,6 +67,7 @@ export interface Recommendation {
   reasons: string[]
   risks: string[]
   price: Technicals
+  plan: TradePlan | null
 }
 
 export interface SignalsFile {
@@ -74,3 +95,6 @@ export type View = 'dashboard' | 'settings'
 export type Theme = 'dark' | 'light'
 export type ChartRange = '1D' | '1M' | '3M' | '6M' | '1Y'
 export type RatingFilter = 'all' | 'buys' | Rating
+export type ActionFilter = 'all' | PlanAction
+export type SortKey = 'score' | 'upside' | 'change' | 'risk'
+export type Overlay = 'sma20' | 'sma50' | 'sma200' | 'levels'

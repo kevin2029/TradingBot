@@ -36,8 +36,12 @@ export async function request(url, { method = 'GET', headers = {}, body, timeout
       if (!res.ok) throw new HttpError(`HTTP ${res.status} for ${redact(url)}`, res.status)
       return res
     } catch (err) {
-      lastErr = err.name === 'AbortError' ? new Error(`Timeout for ${redact(url)}`) : err
-      if (err instanceof HttpError && err.status < 500 && err.status !== 429) throw err
+      if (err instanceof HttpError) throw err // 4xx: retrying will not help
+      if (err.name !== 'AbortError') {
+        // DNS / connection refused / TLS: fail fast, the network is not there
+        throw new Error(`Network error for ${redact(url)}: ${err.cause?.code || err.message}`)
+      }
+      lastErr = new Error(`Timeout for ${redact(url)}`)
       await sleep(1000 * (attempt + 1))
     } finally {
       clearTimeout(timer)
