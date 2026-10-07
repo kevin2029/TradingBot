@@ -1,84 +1,76 @@
-export type AssetKey = 'XAG' | 'XAU' | 'CL' | 'SPX'
+// Shape of public/data/signals.json (written by scripts/build-signals.mjs).
 
-export interface AssetDef {
-  key: AssetKey
-  name: string
+export type SourceKey = 'congress' | 'insider' | 'contracts' | 'lobbying' | 'social' | 'prices'
+export type ComponentKey = 'technical' | 'congress' | 'insider' | 'social' | 'contracts' | 'lobbying'
+export type Rating = 'strong-buy' | 'buy' | 'watch' | 'avoid'
+export type Regime = 'risk-on' | 'neutral' | 'risk-off'
+
+/** [unix seconds, close] */
+export type Bar = [number, number]
+
+export interface SourceStatus {
+  ok: boolean
+  count: number
+  fetchedAt: string
+  error?: string
+  attribution: { label: string; url: string }
+}
+
+export interface Technicals {
+  last: number
+  change1d: number
+  ret20: number
+  sma50: number | null
+  sma200: number | null
+  rsi14: number | null
+  vol20: number
+  history: Bar[]
+}
+
+export interface Benchmark extends Technicals {
   symbol: string
-  base: number
-  vol: number
-  dollarPrefix: boolean
-  multiplier: number
+  name: string
 }
 
-export interface PricePoint {
-  t: number
-  p: number
+export interface Component {
+  score: number | null
+  detail: string
 }
 
-export interface SeriesState {
-  open: number
-  pts: PricePoint[]
+export interface Recommendation {
+  symbol: string
+  name: string
+  score: number
+  rating: Rating
+  agreeing: number
+  components: Record<ComponentKey, Component>
+  reasons: string[]
+  risks: string[]
+  price: Technicals
 }
 
-export type Side = 'BUY' | 'SELL'
+export interface SignalsFile {
+  version: 1
+  generatedAt: string
+  stale?: boolean
+  weights: Record<ComponentKey, number>
+  sources: Record<SourceKey, SourceStatus>
+  market: { regime: Regime; summary: string; indices: Benchmark[] }
+  recommendations: Recommendation[]
+}
 
-export interface Trade {
-  id: number
-  ts: number
-  asset: AssetKey
-  side: Side
-  qty: number
+// ---- live prices (browser, Finnhub) ----------------------------------------
+
+export interface LiveQuote {
   price: number
-  pnl: number
-}
-
-export type PositionSide = 'LONG' | 'SHORT'
-
-export interface Position {
-  id: number
-  asset: AssetKey
-  side: PositionSide
-  qty: number
-  entry: number
-}
-
-export type AlertKind = 'SYSTEM' | 'RISK' | 'FEED' | 'SIGNAL' | 'FILL'
-
-export interface AlertItem {
-  id: number
+  /** previous close, used for the day change */
+  prevClose?: number
   ts: number
-  kind: AlertKind
-  message: string
 }
 
-export type Mode = 'sandbox' | 'live'
+export type LiveStatus = 'no-key' | 'connecting' | 'live' | 'closed' | 'error'
+
 export type View = 'dashboard' | 'settings'
-export type Range = '15M' | '1H' | '4H' | '1D'
 export type Theme = 'dark' | 'light'
-export type Strategy = 'ma' | 'rsi' | 'bb'
-export type Interval = '1m' | '5m' | '15m' | '1h'
-export type OrderType = 'market' | 'limit' | 'twap'
-export type Currency = 'USD' | 'EUR' | 'GBP'
-export type Broker = 'ibkr' | 'alpaca' | 'oanda' | 'tradovate' | 'binance' | 'custom'
-export type BrokerEnv = 'paper' | 'prod'
-export type Connection = 'connected' | 'testing' | 'disconnected'
-
-export interface RiskSettings {
-  size: number
-  loss: number
-  stop: number
-  take: number
-  concurrent: number
-}
-
-export interface ToggleSettings {
-  trailing: boolean
-  hours: boolean
-  hedge: boolean
-}
-
-export interface NotificationSettings {
-  fills: boolean
-  risk: boolean
-  digest: boolean
-}
+export type ChartRange = '1D' | '1M' | '3M' | '6M' | '1Y'
+export type RatingFilter = 'all' | 'buys' | Rating

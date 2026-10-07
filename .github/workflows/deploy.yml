@@ -1,9 +1,14 @@
-name: Deploy to GitHub Pages
+name: Build signals and deploy
 
 on:
   push:
     branches: [main]
   workflow_dispatch:
+  schedule:
+    # Hourly on weekdays (UTC), every 6 hours at weekends. Disclosures move slowly;
+    # live prices are streamed in the browser, so this only refreshes the scores.
+    - cron: '17 * * * 1-5'
+    - cron: '17 */6 * * 0,6'
 
 permissions:
   contents: read
@@ -12,11 +17,12 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -24,6 +30,22 @@ jobs:
           node-version: 20
           cache: npm
       - run: npm ci
+
+      # Keeps slow-moving sources (Congress, lobbying, contracts, insider) between
+      # runs so free API quotas are respected.
+      - uses: actions/cache@v4
+        with:
+          path: .signals-cache
+          key: signals-cache-${{ github.run_id }}
+          restore-keys: signals-cache-
+
+      - run: npm run test:signals
+      - run: npm run signals
+        env:
+          FINNHUB_API_KEY: ${{ secrets.FINNHUB_API_KEY }}
+          BARGO_API_KEY: ${{ secrets.BARGO_API_KEY }}
+          LDA_API_KEY: ${{ secrets.LDA_API_KEY }}
+          SEC_USER_AGENT: ${{ vars.SEC_USER_AGENT || 'MeridianSignals/1.0 (github.com/kevin2029/TradingBot)' }}
       - run: npm run build
       - uses: actions/upload-pages-artifact@v3
         with:

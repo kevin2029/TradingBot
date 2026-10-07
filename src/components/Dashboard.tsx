@@ -1,39 +1,54 @@
-import { ControlCard } from './ControlCard'
-import { AccountCard } from './AccountCard'
-import { SystemHealthCard } from './SystemHealthCard'
-import { AssetCard } from './AssetCard'
-import { FocusedChart } from './FocusedChart'
-import { ActivityLog } from './ActivityLog'
-import { OpenPositions } from './OpenPositions'
-import { AlertsPanel } from './AlertsPanel'
-import { ASSET_ORDER } from '../data/assets'
+import { useMemo } from 'react'
+import { Card } from '../ui/Primitives'
+import { useAppDispatch, useAppState } from '../state/store'
+import { useLivePrices } from '../data/useLivePrices'
+import { MarketPulse } from './MarketPulse'
+import { RecommendationList } from './RecommendationList'
+import { StockDetail } from './StockDetail'
+import { SourcesCard } from './SourcesCard'
 
 export function Dashboard() {
+  const state = useAppState()
+  const dispatch = useAppDispatch()
+  const { signals } = state
+
+  // Stream the indices, the top of the list and whatever is selected (Finnhub free tier: 50 symbols).
+  const symbols = useMemo(() => {
+    if (!signals) return []
+    const list = [...signals.market.indices.map((i) => i.symbol), ...signals.recommendations.slice(0, 30).map((r) => r.symbol)]
+    if (state.selected) list.unshift(state.selected)
+    return list
+  }, [signals, state.selected])
+  useLivePrices(symbols)
+
+  if (!signals) {
+    return (
+      <main className="page">
+        <Card padding={28}>
+          <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 8 }}>{state.signalsLoading ? 'Loading signals…' : 'No signals available'}</div>
+          {state.signalsError && <div style={{ fontSize: 13, color: 'var(--muted)' }}>{state.signalsError}</div>}
+        </Card>
+      </main>
+    )
+  }
+
   return (
-    <main style={{ maxWidth: 1560, margin: '0 auto', padding: 24, display: 'flex', flexDirection: 'column', gap: 20 }}>
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(300px, 100%), 1fr))', gap: 20 }}>
-        <ControlCard />
-        <AccountCard />
-        <SystemHealthCard />
-      </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(230px, 100%), 1fr))', gap: 16 }}>
-        {ASSET_ORDER.map((key) => (
-          <AssetCard key={key} assetKey={key} />
-        ))}
-      </section>
-
-      <section>
-        <FocusedChart />
-      </section>
-
-      <section style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(540px, 100%), 1fr))', gap: 20, alignItems: 'start' }}>
-        <ActivityLog />
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-          <OpenPositions />
-          <AlertsPanel />
+    <main className="page">
+      <MarketPulse />
+      {state.live.status === 'no-key' && (
+        <div style={{ fontSize: 13, color: 'var(--muted)', background: 'var(--infosoft)', border: '1px solid var(--border)', borderRadius: 10, padding: '10px 14px' }}>
+          Showing last close prices. For real-time prices add a free Finnhub key in{' '}
+          <a href="#" onClick={(e) => (e.preventDefault(), dispatch({ type: 'SET_VIEW', view: 'settings' }))}>
+            Settings
+          </a>
+          .
         </div>
+      )}
+      <section className="main-grid">
+        <RecommendationList />
+        <StockDetail />
       </section>
+      <SourcesCard />
     </main>
   )
 }
